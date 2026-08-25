@@ -29,7 +29,10 @@ order page remains available.
 9. Optionally upload a wide **Google Wallet hero image** in that output's event
    settings. It is used before the event's Open Graph image. Only publicly
    reachable HTTPS images can be fetched by Google Wallet.
-10. For event series, use **Event settings → Google Wallet hero images** to
+10. Optionally set a **Google Wallet logo** and **background color** in the
+    same output settings. The event or inherited organizer branding is used
+    when these fields are empty.
+11. For event series, use **Event settings → Google Wallet hero images** to
     override the hero image for individual dates. Empty dates use the event and
     organizer fallbacks.
 
@@ -55,6 +58,10 @@ The class also uses the event background color, event/subevent venue and geo
 coordinates when available. A specific hero image is preferred, followed by the
 event Open Graph image and only then a deliberately marked large event/organizer
 logo; small logos are not promoted to hero images.
+
+Each Wallet object links back to the public Pretix ticket page and its order
+page using the existing order/position secrets. No new validation or ticket URL
+is introduced.
 
 Canceled or blocked tickets map to Google Wallet's INACTIVE state; expired
 tickets map to EXPIRED. Automatic background updates and push notifications are

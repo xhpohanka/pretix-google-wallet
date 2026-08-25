@@ -31,6 +31,10 @@ msgstr "JSON musí obsahovat e-mail klienta a soukromý klíč účtu služby."
 msgid "The Google Wallet issuer ID contains digits only."
 msgstr "ID vydavatele Google Wallet smí obsahovat pouze číslice."
 
+#: pretix_google_wallet/forms.py:15
+msgid "Enter a hexadecimal color in the format #rrggbb."
+msgstr "Zadejte hexadecimální barvu ve formátu #rrggbb."
+
 #: pretix_google_wallet/forms.py:17
 msgid "Google Wallet issuer ID"
 msgstr "ID vydavatele Google Wallet"
@@ -83,6 +87,22 @@ msgstr "Hlavní obrázek Google Wallet"
 #: pretix_google_wallet/ticketoutput.py:36
 msgid "Optional wide event image. It must be publicly reachable over HTTPS."
 msgstr "Volitelný široký obrázek akce. Musí být veřejně dostupný přes HTTPS."
+
+#: pretix_google_wallet/ticketoutput.py:47
+msgid "Google Wallet logo"
+msgstr "Logo Google Wallet"
+
+#: pretix_google_wallet/ticketoutput.py:49
+msgid "Optional logo. It must be publicly reachable over HTTPS; the event or organizer logo is used otherwise."
+msgstr "Volitelné logo. Musí být veřejně dostupné přes HTTPS; jinak se použije logo akce nebo organizátora."
+
+#: pretix_google_wallet/ticketoutput.py:59
+msgid "Google Wallet background color"
+msgstr "Barva pozadí Google Wallet"
+
+#: pretix_google_wallet/ticketoutput.py:61
+msgid "Optional hexadecimal color, for example #920c0b. The event shop color is used otherwise."
+msgstr "Volitelná hexadecimální barva, například #920c0b. Jinak se použije barva obchodu akce."
 
 #: pretix_google_wallet/views.py:82
 msgid "Your changes have been saved."

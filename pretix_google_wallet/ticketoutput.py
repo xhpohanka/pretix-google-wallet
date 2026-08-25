@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from django import forms
 from django.conf import settings
 from django.templatetags.static import static
 from django.utils.translation import gettext_lazy as _
@@ -8,6 +9,7 @@ from pretix.control.forms import ExtFileField
 from pretix.multidomain.urlreverse import eventreverse_absolute
 
 from .client import configured
+from .forms import wallet_color_validator
 
 
 def _static_asset(name):
@@ -59,6 +61,32 @@ class GoogleWalletOutput(BaseTicketOutput):
                         ext_whitelist=settings.FILE_UPLOAD_EXTENSIONS_IMAGE,
                         max_size=settings.FILE_UPLOAD_MAX_SIZE_IMAGE,
                         required=False,
+                    ),
+                ),
+                (
+                    "logo_image",
+                    ExtFileField(
+                        label=_("Google Wallet logo"),
+                        help_text=_(
+                            "Optional logo. It must be publicly reachable over HTTPS; "
+                            "the event or organizer logo is used otherwise."
+                        ),
+                        ext_whitelist=settings.FILE_UPLOAD_EXTENSIONS_IMAGE,
+                        max_size=settings.FILE_UPLOAD_MAX_SIZE_IMAGE,
+                        required=False,
+                    ),
+                ),
+                (
+                    "background_color",
+                    forms.CharField(
+                        label=_("Google Wallet background color"),
+                        help_text=_(
+                            "Optional hexadecimal color, for example #920c0b. "
+                            "The event shop color is used otherwise."
+                        ),
+                        required=False,
+                        validators=[wallet_color_validator],
+                        widget=forms.TextInput(attrs={"placeholder": "#920c0b"}),
                     ),
                 ),
             ]

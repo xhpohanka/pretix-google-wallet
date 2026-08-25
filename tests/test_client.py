@@ -46,6 +46,7 @@ class GoogleWalletClientTest(SimpleTestCase):
         order = SimpleNamespace(
             pk=9,
             code="ABCDE",
+            secret="order-secret",
             event=event,
             locale="en",
             status="p",
@@ -64,12 +65,14 @@ class GoogleWalletClientTest(SimpleTestCase):
             addon_to_id=None,
             positionid=1,
             secret="ticket-secret",
+            web_secret="ticket-web-secret",
             valid_from=None,
             valid_until=None,
         )
 
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
     @patch("pretix_google_wallet.client.get_seat")
-    def test_mapping_uses_stable_ids_current_subevent_seat_and_exact_secret(self, get_seat):
+    def test_mapping_uses_stable_ids_current_subevent_seat_and_exact_secret(self, get_seat, event_url):
         get_seat.return_value = SimpleNamespace(
             seat_label="7",
             seat_number="7",
@@ -109,6 +112,38 @@ class GoogleWalletClientTest(SimpleTestCase):
         self.assertTrue(wallet_position_is_eligible(self.position, datetime.datetime(2026, 8, 1, tzinfo=datetime.UTC)))
         self.position.canceled = True
         self.assertFalse(wallet_position_is_eligible(self.position, datetime.datetime(2026, 8, 1, tzinfo=datetime.UTC)))
+
+    @patch("pretix_google_wallet.client.eventreverse_absolute")
+    def test_object_contains_ticket_and_order_links(self, event_url):
+        event_url.side_effect = lambda event, name, kwargs=None: (
+            f"https://tickets.example/{name}/{kwargs['order']}"
+        )
+
+        payload = build_event_ticket_object("123", self.position)
+
+        self.assertEqual(
+            [link["uri"] for link in payload["linksModuleData"]["uris"]],
+            [
+                "https://tickets.example/presale:event.order.position/ABCDE",
+                "https://tickets.example/presale:event.order/ABCDE",
+            ],
+        )
+
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
+    @patch("pretix_google_wallet.client.default_storage.url", return_value="/media/wallet-logo.png")
+    def test_explicit_logo_and_background_color(self, storage_url, event_url):
+        self.position.order.event.settings.get.side_effect = lambda name, **kwargs: {
+            "ticketoutput_googlewallet_logo_image": "file://wallet/logo.png",
+            "ticketoutput_googlewallet_background_color": "#920c0b",
+        }.get(name, "")
+
+        payload = build_event_ticket_class("123", self.position)
+
+        self.assertEqual(
+            payload["logo"]["sourceUri"]["uri"],
+            "https://tickets.example/media/wallet-logo.png",
+        )
+        self.assertEqual(payload["hexBackgroundColor"], "#920c0b")
 
     def test_different_subevents_get_different_classes_and_groups(self):
         second_data = self.position.subevent.__dict__.copy()
@@ -156,7 +191,8 @@ class GoogleWalletClientTest(SimpleTestCase):
             timeout=15,
         )
 
-    def test_batch_upsert_reuses_one_class_for_same_subevent(self):
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
+    def test_batch_upsert_reuses_one_class_for_same_subevent(self, event_url):
         session = Mock()
         session.post.return_value = SimpleNamespace(status_code=200)
         client = GoogleWalletClient("123", Mock(), session=session)

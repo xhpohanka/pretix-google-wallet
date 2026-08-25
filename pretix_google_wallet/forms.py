@@ -11,6 +11,10 @@ issuer_id_validator = RegexValidator(
     regex=r"^[0-9]+$",
     message=_("The Google Wallet issuer ID contains digits only."),
 )
+wallet_color_validator = RegexValidator(
+    regex=r"^#[0-9a-fA-F]{6}$",
+    message=_("Enter a hexadecimal color in the format #rrggbb."),
+)
 
 
 def credential_fields():

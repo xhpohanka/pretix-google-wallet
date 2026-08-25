@@ -38,7 +38,7 @@ def _local_iso(value, event):
 
 
 def _event_logo_url(event):
-    names = ["logo_image"]
+    names = ["ticketoutput_googlewallet_logo_image", "logo_image"]
     if event.settings.organizer_logo_image_inherit:
         names.append("organizer_logo_image")
     return _first_asset_url(event, names)
@@ -75,10 +75,49 @@ def _event_hero_url(event, subevent=None):
 
 
 def _event_color(event):
-    value = event.settings.get("theme_color_background", default="#f5f5f5")
-    if isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", value):
-        return value
+    for name in (
+        "ticketoutput_googlewallet_background_color",
+        "theme_color_background",
+    ):
+        value = event.settings.get(name, default="")
+        if isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+            return value
     return "#f5f5f5"
+
+
+def _link_label(label, locale):
+    if (locale or "").lower().startswith("cs"):
+        return {"Ticket": "Vstupenka", "Order": "Objednávka"}[label]
+    return label
+
+
+def _ticket_links(position, locale):
+    order = position.order
+    event = order.event
+    links = []
+    if getattr(position, "web_secret", None):
+        links.append({
+            "uri": eventreverse_absolute(
+                event,
+                "presale:event.order.position",
+                kwargs={
+                    "order": order.code,
+                    "position": position.positionid,
+                    "secret": position.web_secret,
+                },
+            ),
+            "localizedDescription": _localized(_link_label("Ticket", locale), locale),
+        })
+    if getattr(order, "secret", None):
+        links.append({
+            "uri": eventreverse_absolute(
+                event,
+                "presale:event.order",
+                kwargs={"order": order.code, "secret": order.secret},
+            ),
+            "localizedDescription": _localized(_link_label("Order", locale), locale),
+        })
+    return links
 
 
 def class_id(issuer_id, position):
@@ -220,6 +259,9 @@ def build_event_ticket_object(issuer_id, position):
         validity["end"] = {"date": _local_iso(position.valid_until, event)}
     if validity:
         payload["validTimeInterval"] = validity
+    links = _ticket_links(position, locale)
+    if links:
+        payload["linksModuleData"] = {"uris": links}
     return payload
 
 
