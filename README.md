@@ -29,6 +29,9 @@ order page remains available.
 9. Optionally upload a wide **Google Wallet hero image** in that output's event
    settings. It is used before the event's Open Graph image. Only publicly
    reachable HTTPS images can be fetched by Google Wallet.
+10. For event series, use **Event settings → Google Wallet hero images** to
+    override the hero image for individual dates. Empty dates use the event and
+    organizer fallbacks.
 
 Never commit the service-account JSON file or private key.
 

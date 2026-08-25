@@ -4,6 +4,7 @@ from .views import (
     GoogleWalletSaveAllView,
     GoogleWalletSaveView,
     GoogleWalletSettingsView,
+    GoogleWalletSubeventHeroView,
 )
 
 event_patterns = [
@@ -20,6 +21,11 @@ event_patterns = [
 ]
 
 urlpatterns = [
+    path(
+        "control/event/<str:organizer>/<str:event>/google-wallet/hero/",
+        GoogleWalletSubeventHeroView.as_view(),
+        name="subevent_hero",
+    ),
     path(
         "control/organizer/<str:organizer>/google-wallet/",
         GoogleWalletSettingsView.as_view(),

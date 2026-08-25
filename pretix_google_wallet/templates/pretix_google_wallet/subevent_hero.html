@@ -1,0 +1,43 @@
+{% extends "pretixcontrol/event/settings_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Google Wallet hero images" %}{% endblock %}
+
+{% block inside %}
+    <h1>{% trans "Google Wallet hero images" %}</h1>
+    <p class="help-block">
+        {% trans "Optionally set a separate hero image for each event date. Empty fields use the event-level and organizer-level fallbacks." %}
+    </p>
+    <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="table-responsive">
+            <table class="table table-condensed table-hover">
+                <thead>
+                    <tr>
+                        <th>{% trans "Event date" %}</th>
+                        <th>{% trans "Hero image" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subevent, field in hero_rows %}
+                        <tr>
+                            <th>
+                                {{ subevent }}<br>
+                                <small>{{ subevent.date_from|date:"SHORT_DATETIME_FORMAT" }}</small>
+                            </th>
+                            <td>
+                                {{ field }}
+                                {% for error in field.errors %}<div class="help-block">{{ error }}</div>{% endfor %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2">{% trans "This event has no dates." %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="form-group submit-group">
+            <button type="submit" class="btn btn-primary btn-save">{% trans "Save" %}</button>
+        </div>
+    </form>
+{% endblock %}

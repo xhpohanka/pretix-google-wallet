@@ -101,4 +101,25 @@ msgstr ""
 #: pretix_google_wallet/views.py:154
 msgid "The Google Wallet tickets could not be created. Please try again later."
 msgstr "Vstupenky Google Wallet se nepodařilo vytvořit. Zkuste to prosím později."
+
+msgid "Google Wallet hero images"
+msgstr "Hlavní obrázky Peněženky Google"
+
+msgid "Leave empty to use the event or organizer fallback."
+msgstr "Ponechte prázdné pro použití obrázku akce nebo organizátora."
+
+msgid "The subevent hero images have been saved."
+msgstr "Hlavní obrázky termínů byly uloženy."
+
+msgid "Optionally set a separate hero image for each event date. Empty fields use the event-level and organizer-level fallbacks."
+msgstr "Volitelně nastavte samostatný hlavní obrázek pro každý termín. Prázdná pole použijí obrázek akce nebo organizátora."
+
+msgid "Event date"
+msgstr "Termín akce"
+
+msgid "Hero image"
+msgstr "Hlavní obrázek"
+
+msgid "This event has no dates."
+msgstr "Tato akce nemá žádné termíny."
 "Vstupenku Google Wallet se nepodařilo vytvořit. Zkuste to prosím později."

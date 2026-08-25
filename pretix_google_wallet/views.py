@@ -10,14 +10,18 @@ from django.views import View
 from django.views.generic import FormView
 from pretix.base.models import OrderPosition, Organizer
 from pretix.base.timemachine import time_machine_now
-from pretix.control.permissions import OrganizerPermissionRequiredMixin
+from pretix.control.permissions import (
+    EventPermissionRequiredMixin,
+    OrganizerPermissionRequiredMixin,
+)
+from pretix.control.views.event import EventSettingsViewMixin
 from pretix.control.views.organizer import OrganizerDetailViewMixin
 from pretix.helpers.http import redirect_to_url
 from pretix.presale.views import EventViewMixin
 from pretix.presale.views.order import OrderDetailMixin
 
 from .client import GoogleWalletClient, GoogleWalletError, wallet_position_is_eligible
-from .forms import GoogleWalletOrganizerSettingsForm
+from .forms import GoogleWalletOrganizerSettingsForm, GoogleWalletSubeventHeroForm
 from .ticketoutput import GoogleWalletOutput
 
 logger = logging.getLogger(__name__)
@@ -80,6 +84,37 @@ class GoogleWalletSettingsView(
                 },
             )
         messages.success(self.request, _("Your changes have been saved."))
+        return super().form_valid(form)
+
+
+class GoogleWalletSubeventHeroView(EventSettingsViewMixin, EventPermissionRequiredMixin, FormView):
+    template_name = "pretix_google_wallet/subevent_hero.html"
+    form_class = GoogleWalletSubeventHeroForm
+    permission = "event.settings.general:write"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["event"] = self.request.event
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["hero_rows"] = context["form"].hero_rows()
+        return context
+
+    def get_success_url(self):
+        return reverse(
+            "plugins:pretix_google_wallet:subevent_hero",
+            kwargs={
+                "organizer": self.request.organizer.slug,
+                "event": self.request.event.slug,
+            },
+        )
+
+    @transaction.atomic
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, _("The subevent hero images have been saved."))
         return super().form_valid(form)
 
 

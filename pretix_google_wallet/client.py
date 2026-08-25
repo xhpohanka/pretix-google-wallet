@@ -17,6 +17,7 @@ from requests import RequestException
 API_ROOT = "https://walletobjects.googleapis.com/walletobjects/v1"
 WALLET_SCOPE = "https://www.googleapis.com/auth/wallet_object.issuer"
 SAVE_URL = "https://pay.google.com/gp/v/save/{}"
+SUBEVENT_HERO_PREFIX = "ticketoutput_googlewallet_hero_image_subevent_"
 
 
 class GoogleWalletError(Exception):
@@ -57,8 +58,15 @@ def _first_asset_url(event, names):
             return url
 
 
-def _event_hero_url(event):
-    names = ["ticketoutput_googlewallet_hero_image", "og_image"]
+def subevent_hero_setting_key(subevent):
+    return f"{SUBEVENT_HERO_PREFIX}{subevent.pk}"
+
+
+def _event_hero_url(event, subevent=None):
+    names = []
+    if subevent is not None:
+        names.append(subevent_hero_setting_key(subevent))
+    names.extend(["ticketoutput_googlewallet_hero_image", "og_image"])
     if event.settings.logo_image_large:
         names.append("logo_image")
     if event.settings.organizer_logo_image_inherit and event.settings.organizer_logo_image_large:
@@ -125,7 +133,7 @@ def build_event_ticket_class(issuer_id, position):
             "sourceUri": {"uri": logo},
             "contentDescription": _localized(str(event.organizer.name), locale),
         }
-    hero = _event_hero_url(event)
+    hero = _event_hero_url(event, position.subevent)
     if hero:
         payload["heroImage"] = {
             "sourceUri": {"uri": hero},

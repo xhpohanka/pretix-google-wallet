@@ -130,6 +130,18 @@ class GoogleWalletClientTest(SimpleTestCase):
 
         self.assertEqual(payload["heroImage"]["sourceUri"]["uri"], "https://tickets.example/media/hero.jpg")
 
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
+    @patch("pretix_google_wallet.client.default_storage.url", return_value="/media/subevent-hero.jpg")
+    def test_hero_image_prefers_subevent_setting(self, storage_url, event_url):
+        self.position.order.event.settings.get.side_effect = lambda name, **kwargs: (
+            "file://wallet/subevent-hero.jpg"
+            if name == "ticketoutput_googlewallet_hero_image_subevent_4" else ""
+        )
+
+        payload = build_event_ticket_class("123", self.position)
+
+        self.assertEqual(payload["heroImage"]["sourceUri"]["uri"], "https://tickets.example/media/subevent-hero.jpg")
+
     def test_upsert_updates_an_existing_resource(self):
         session = Mock()
         session.post.return_value = SimpleNamespace(status_code=409)
