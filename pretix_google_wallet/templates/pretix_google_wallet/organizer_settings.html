@@ -1,0 +1,23 @@
+{% extends "pretixcontrol/organizers/base.html" %}
+{% load bootstrap3 i18n %}
+
+{% block title %}{% trans "Google Wallet" %}{% endblock %}
+{% block content %}
+    <h1>{% trans "Google Wallet" %}</h1>
+    <div class="alert alert-info">
+        {% blocktrans trimmed %}
+            Enable the Google Wallet API, authorize the service account as a Developer in the Google Pay and Wallet
+            console, and enter the issuer ID below. You can configure credentials globally, for this organizer, or
+            through GOOGLE_APPLICATION_CREDENTIALS on the server.
+        {% endblocktrans %}
+    </div>
+    <form action="" method="post" class="form-horizontal">
+        {% csrf_token %}
+        {% bootstrap_form form layout="control" %}
+        <div class="form-group submit-group">
+            <button type="submit" class="btn btn-primary btn-save">
+                <span class="fa fa-save" aria-hidden="true"></span> {% trans "Save" %}
+            </button>
+        </div>
+    </form>
+{% endblock %}

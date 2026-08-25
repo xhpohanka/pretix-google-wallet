@@ -1,0 +1,3 @@
+recursive-include pretix_google_wallet/locale *
+recursive-include pretix_google_wallet/static *
+recursive-include pretix_google_wallet/templates *

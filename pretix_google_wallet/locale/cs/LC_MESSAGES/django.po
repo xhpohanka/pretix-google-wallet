@@ -1,0 +1,104 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: pretix-google-wallet 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-25 16:25+0200\n"
+"Language: cs\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: pretix_google_wallet/apps.py:9 pretix_google_wallet/apps.py:12
+#: pretix_google_wallet/signals.py:32
+#: pretix_google_wallet/templates/pretix_google_wallet/organizer_settings.html:4
+#: pretix_google_wallet/templates/pretix_google_wallet/organizer_settings.html:6
+msgid "Google Wallet"
+msgstr "Google Wallet"
+
+#: pretix_google_wallet/apps.py:14
+msgid "Add native Google Wallet event tickets to pretix orders."
+msgstr "Přidává nativní vstupenky Google Wallet k objednávkám v pretixu."
+
+#: pretix_google_wallet/fields.py:15
+msgid "Enter a valid service account JSON document."
+msgstr "Zadejte platný JSON účtu služby."
+
+#: pretix_google_wallet/fields.py:17
+msgid "The JSON must contain a service account client email and private key."
+msgstr "JSON musí obsahovat e-mail klienta a soukromý klíč účtu služby."
+
+#: pretix_google_wallet/forms.py:10
+msgid "The Google Wallet issuer ID contains digits only."
+msgstr "ID vydavatele Google Wallet smí obsahovat pouze číslice."
+
+#: pretix_google_wallet/forms.py:17
+msgid "Google Wallet issuer ID"
+msgstr "ID vydavatele Google Wallet"
+
+#: pretix_google_wallet/forms.py:22
+msgid "Google service account JSON"
+msgstr "JSON účtu služby Google"
+
+#: pretix_google_wallet/forms.py:24
+msgid ""
+"Stored as a masked setting. Leave empty to use the "
+"GOOGLE_APPLICATION_CREDENTIALS environment variable."
+msgstr ""
+"Ukládá se jako maskované nastavení. Ponecháte-li pole prázdné, použije se "
+"proměnná prostředí GOOGLE_APPLICATION_CREDENTIALS."
+
+#: pretix_google_wallet/templates/pretix_google_wallet/organizer_settings.html:8
+msgid ""
+"Enable the Google Wallet API, authorize the service account as a Developer "
+"in the Google Pay and Wallet console, and enter the issuer ID below. You can "
+"configure credentials globally, for this organizer, or through "
+"GOOGLE_APPLICATION_CREDENTIALS on the server."
+msgstr ""
+"Povolte Google Wallet API, přidejte účet služby jako vývojáře v konzoli "
+"Google Pay a Wallet a níže zadejte ID vydavatele. Přihlašovací údaje lze "
+"nastavit globálně, pro tohoto pořadatele nebo pomocí proměnné prostředí "
+"GOOGLE_APPLICATION_CREDENTIALS na serveru."
+
+#: pretix_google_wallet/templates/pretix_google_wallet/organizer_settings.html:19
+msgid "Save"
+msgstr "Uložit"
+
+#: pretix_google_wallet/ticketoutput.py:14
+msgid "Google Wallet event tickets"
+msgstr "Vstupenky Google Wallet"
+
+#: pretix_google_wallet/ticketoutput.py:16
+#: pretix_google_wallet/ticketoutput.py:18
+msgid "Add to Google Wallet"
+msgstr "Přidat do Peněženky Google"
+
+#: pretix_google_wallet/ticketoutput.py:17
+msgid "Add all to Google Wallet"
+msgstr "Přidat vše do Peněženky Google"
+
+#: pretix_google_wallet/ticketoutput.py:34
+msgid "Google Wallet hero image"
+msgstr "Hlavní obrázek Google Wallet"
+
+#: pretix_google_wallet/ticketoutput.py:36
+msgid "Optional wide event image. It must be publicly reachable over HTTPS."
+msgstr "Volitelný široký obrázek akce. Musí být veřejně dostupný přes HTTPS."
+
+#: pretix_google_wallet/views.py:82
+msgid "Your changes have been saved."
+msgstr "Změny byly uloženy."
+
+#: pretix_google_wallet/views.py:107 pretix_google_wallet/views.py:113
+#: pretix_google_wallet/views.py:137 pretix_google_wallet/views.py:143
+msgid "Ticket download is not available."
+msgstr "Stažení vstupenky není dostupné."
+
+#: pretix_google_wallet/views.py:124
+msgid "The Google Wallet ticket could not be created. Please try again later."
+msgstr ""
+"Vstupenku Google Wallet se nepodařilo vytvořit. Zkuste to prosím později."
+
+#: pretix_google_wallet/views.py:154
+msgid "The Google Wallet tickets could not be created. Please try again later."
+msgstr "Vstupenky Google Wallet se nepodařilo vytvořit. Zkuste to prosím později."
+"Vstupenku Google Wallet se nepodařilo vytvořit. Zkuste to prosím později."
