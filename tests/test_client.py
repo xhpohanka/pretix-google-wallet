@@ -2,7 +2,7 @@ import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase
 from requests import ConnectionError
 
 from pretix_google_wallet.client import (
@@ -16,9 +16,10 @@ from pretix_google_wallet.client import (
     object_id,
     wallet_position_is_eligible,
 )
+from pretix_google_wallet.models import WalletResourceSync
 
 
-class GoogleWalletClientTest(SimpleTestCase):
+class GoogleWalletClientTest(TestCase):
     def setUp(self):
         organizer = SimpleNamespace(pk=2, name="Theatre", settings=Mock())
         event_settings = Mock(locale="en", organizer_logo_image_inherit=False)
@@ -179,7 +180,6 @@ class GoogleWalletClientTest(SimpleTestCase):
 
     def test_upsert_updates_an_existing_resource(self):
         session = Mock()
-        session.post.return_value = SimpleNamespace(status_code=409)
         session.patch.return_value = SimpleNamespace(status_code=200)
         client = GoogleWalletClient("123", Mock(), session=session)
 
@@ -194,6 +194,7 @@ class GoogleWalletClientTest(SimpleTestCase):
     @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
     def test_batch_upsert_reuses_one_class_for_same_subevent(self, event_url):
         session = Mock()
+        session.patch.return_value = SimpleNamespace(status_code=404)
         session.post.return_value = SimpleNamespace(status_code=200)
         client = GoogleWalletClient("123", Mock(), session=session)
         second_data = self.position.__dict__.copy()
@@ -205,9 +206,58 @@ class GoogleWalletClientTest(SimpleTestCase):
         self.assertEqual(identifiers, ["123.pretix_2_3_5", "123.pretix_2_3_6"])
         self.assertEqual(session.post.call_count, 3)
 
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
+    def test_cached_resources_skip_api_requests(self, event_url):
+        session = Mock()
+        session.patch.return_value = SimpleNamespace(status_code=404)
+        session.post.return_value = SimpleNamespace(status_code=200)
+        client = GoogleWalletClient("123", Mock(), session=session)
+
+        client.ensure_ticket(self.position)
+        session.reset_mock()
+        client.ensure_ticket(self.position)
+
+        session.post.assert_not_called()
+        session.patch.assert_not_called()
+        self.assertEqual(WalletResourceSync.objects.count(), 2)
+
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
+    def test_api_timings_are_logged_without_payload_data(self, event_url):
+        session = Mock()
+        session.patch.return_value = SimpleNamespace(status_code=404)
+        session.post.return_value = SimpleNamespace(status_code=200)
+        client = GoogleWalletClient("123", Mock(), session=session)
+
+        with self.assertLogs("pretix_google_wallet.client", level="DEBUG") as logs:
+            client.ensure_ticket(self.position)
+
+        output = "\n".join(logs.output)
+        self.assertIn("Google Wallet eventTicketClass POST:", output)
+        self.assertIn("Google Wallet total API time:", output)
+        self.assertNotIn("ticket-secret", output)
+
+    @patch("pretix_google_wallet.client.eventreverse_absolute", return_value="https://tickets.example/")
+    def test_changed_object_uses_patch_without_insert(self, event_url):
+        session = Mock()
+        session.post.return_value = SimpleNamespace(status_code=200)
+        session.patch.side_effect = [
+            SimpleNamespace(status_code=404),
+            SimpleNamespace(status_code=404),
+            SimpleNamespace(status_code=200),
+        ]
+        client = GoogleWalletClient("123", Mock(), session=session)
+
+        client.ensure_ticket(self.position)
+        session.reset_mock()
+        self.position.attendee_name = "Grace Hopper"
+        client.ensure_ticket(self.position)
+
+        session.post.assert_not_called()
+        session.patch.assert_called_once()
+
     def test_network_errors_are_safe(self):
         session = Mock()
-        session.post.side_effect = ConnectionError("offline")
+        session.patch.side_effect = ConnectionError("offline")
         client = GoogleWalletClient("123", Mock(), session=session)
 
         with self.assertRaises(GoogleWalletError):

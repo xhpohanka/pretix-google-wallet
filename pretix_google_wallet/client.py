@@ -1,10 +1,14 @@
+import hashlib
 import json
+import logging
 import os
 import re
 import time
+from time import perf_counter
 from urllib.parse import quote, urljoin, urlsplit
 
 from django.core.files.storage import default_storage
+from django.utils import timezone
 from google.auth import jwt as google_jwt
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
@@ -14,10 +18,14 @@ from pretix.base.timemachine import time_machine_now
 from pretix.multidomain.urlreverse import eventreverse_absolute
 from requests import RequestException
 
+from .models import WalletResourceSync
+
 API_ROOT = "https://walletobjects.googleapis.com/walletobjects/v1"
 WALLET_SCOPE = "https://www.googleapis.com/auth/wallet_object.issuer"
 SAVE_URL = "https://pay.google.com/gp/v/save/{}"
 SUBEVENT_HERO_PREFIX = "ticketoutput_googlewallet_hero_image_subevent_"
+logger = logging.getLogger(__name__)
+_CREDENTIAL_CACHE = {}
 
 
 class GoogleWalletError(Exception):
@@ -279,15 +287,27 @@ def load_credentials(event):
     raw = event.organizer.settings.get("google_wallet_service_account", default="")
     try:
         if raw:
+            cache_material = raw if isinstance(raw, str) else json.dumps(raw, sort_keys=True)
+            cache_key = ("json", hashlib.sha256(cache_material.encode("utf-8")).hexdigest())
+            if cache_key in _CREDENTIAL_CACHE:
+                return _CREDENTIAL_CACHE[cache_key]
             info = raw if isinstance(raw, dict) else json.loads(raw)
-            return service_account.Credentials.from_service_account_info(
+            credentials = service_account.Credentials.from_service_account_info(
                 info, scopes=[WALLET_SCOPE],
             )
+            _CREDENTIAL_CACHE[cache_key] = credentials
+            return credentials
         path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
         if path:
-            return service_account.Credentials.from_service_account_file(
+            stat = os.stat(path)
+            cache_key = ("file", path, stat.st_mtime_ns, stat.st_size)
+            if cache_key in _CREDENTIAL_CACHE:
+                return _CREDENTIAL_CACHE[cache_key]
+            credentials = service_account.Credentials.from_service_account_file(
                 path, scopes=[WALLET_SCOPE],
             )
+            _CREDENTIAL_CACHE[cache_key] = credentials
+            return credentials
     except (OSError, TypeError, ValueError) as exc:
         raise GoogleWalletError("The Google Wallet service account configuration is invalid.") from exc
     raise GoogleWalletError("Google Wallet service account credentials are not configured.")
@@ -298,6 +318,7 @@ class GoogleWalletClient:
         self.issuer_id = str(issuer_id)
         self.credentials = credentials
         self.session = session or AuthorizedSession(credentials)
+        self.api_time = 0.0
 
     @classmethod
     def from_event(cls, event):
@@ -306,16 +327,40 @@ class GoogleWalletClient:
             raise GoogleWalletError("The Google Wallet issuer ID is not configured.")
         return cls(issuer_id, load_credentials(event))
 
+    def _request(self, operation, resource, url, body):
+        started = perf_counter()
+        try:
+            response = getattr(self.session, operation)(url, json=body, timeout=15)
+        except RequestException:
+            elapsed = perf_counter() - started
+            self.api_time += elapsed
+            logger.debug(
+                "Google Wallet %s %s: %.2f s (request failed)",
+                resource,
+                operation.upper(),
+                elapsed,
+            )
+            raise
+        elapsed = perf_counter() - started
+        self.api_time += elapsed
+        logger.debug(
+            "Google Wallet %s %s: %.2f s (HTTP %s)",
+            resource,
+            operation.upper(),
+            elapsed,
+            response.status_code,
+        )
+        return response
+
     def _upsert(self, resource, body):
         collection_url = f"{API_ROOT}/{resource}"
         try:
-            response = self.session.post(collection_url, json=body, timeout=15)
+            resource_url = f"{collection_url}/{quote(body['id'], safe='')}"
+            response = self._request("patch", resource, resource_url, body)
+            if response.status_code == 404:
+                response = self._request("post", resource, collection_url, body)
             if response.status_code == 409:
-                response = self.session.patch(
-                    f"{collection_url}/{quote(body['id'], safe='')}",
-                    json=body,
-                    timeout=15,
-                )
+                response = self._request("patch", resource, resource_url, body)
         except RequestException as exc:
             raise GoogleWalletError("The Google Wallet API could not be reached.") from exc
         if not 200 <= response.status_code < 300:
@@ -327,17 +372,53 @@ class GoogleWalletClient:
                 detail or f"Google Wallet API returned HTTP {response.status_code}."
             )
 
+    @staticmethod
+    def _payload_hash(payload):
+        serialized = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(serialized).hexdigest()
+
+    def _sync_resource(self, resource, payload):
+        resource_id = payload["id"]
+        payload_hash = self._payload_hash(payload)
+        sync = WalletResourceSync.objects.filter(resource_id=resource_id).first()
+        if sync and sync.payload_hash == payload_hash:
+            logger.debug("Google Wallet %s skipped: payload unchanged", resource)
+            return False
+        self._upsert(resource, payload)
+        if sync:
+            sync.resource_type = resource
+            sync.payload_hash = payload_hash
+            sync.synced_at = timezone.now()
+            sync.save(update_fields=("resource_type", "payload_hash", "synced_at"))
+        else:
+            WalletResourceSync.objects.create(
+                resource_id=resource_id,
+                resource_type=resource,
+                payload_hash=payload_hash,
+                synced_at=timezone.now(),
+            )
+        return True
+
     def ensure_tickets(self, positions):
+        self.api_time = 0.0
         ticket_classes = {}
         ticket_objects = []
         for position in positions:
             ticket_class = build_event_ticket_class(self.issuer_id, position)
             ticket_classes[ticket_class["id"]] = ticket_class
             ticket_objects.append(build_event_ticket_object(self.issuer_id, position))
-        for ticket_class in ticket_classes.values():
-            self._upsert("eventTicketClass", ticket_class)
-        for ticket_object in ticket_objects:
-            self._upsert("eventTicketObject", ticket_object)
+        try:
+            for ticket_class in ticket_classes.values():
+                self._sync_resource("eventTicketClass", ticket_class)
+            for ticket_object in ticket_objects:
+                self._sync_resource("eventTicketObject", ticket_object)
+        finally:
+            logger.debug("Google Wallet total API time: %.2f s", self.api_time)
         return [ticket_object["id"] for ticket_object in ticket_objects]
 
     def ensure_ticket(self, position):
@@ -359,7 +440,9 @@ class GoogleWalletClient:
                 "eventTicketObjects": [{"id": identifier} for identifier in object_identifiers],
             },
         }
+        started = perf_counter()
         token = google_jwt.encode(self.credentials.signer, claims)
+        logger.debug("Google Wallet JWT generation: %.2f s", perf_counter() - started)
         if isinstance(token, bytes):
             token = token.decode("ascii")
         return SAVE_URL.format(token)

@@ -75,3 +75,21 @@ The order-level button is built on Pretix's existing `generate_order()` ticket
 output hook. A small generic core extension lets outputs provide an image asset
 and request a new browser tab; the plugin's endpoint performs the current
 eligibility check again before issuing the multi-object JWT.
+
+## API request flow and performance
+
+The save endpoint validates the order and ticket locally, builds the current
+Class/Object payloads, synchronizes them, signs a JWT, and redirects to Google.
+It never performs a Google GET. On the first synchronization, each resource is
+updated with `PATCH`; if it does not exist, the plugin falls back to `POST` (and
+handles a concurrent `409` with a final `PATCH`). A changed resource uses the
+same direct `PATCH` path. An unchanged resource produces no Google API request
+at all.
+
+The local `WalletResourceSync` table stores the stable resource ID, payload hash,
+creation time, and last successful synchronization time. DEBUG logging records
+the operation, resource type, HTTP status, request duration, total Google API
+time, and JWT signing duration. It never logs credentials, JWT contents, or
+ticket secrets. Service-account credentials are cached in each worker process,
+so a valid OAuth token and Google authentication state can be reused across
+clicks instead of being recreated for every ticket.
