@@ -3,10 +3,25 @@ from collections import OrderedDict
 from django.dispatch import receiver
 from django.urls import resolve, reverse
 from django.utils.translation import gettext_lazy as _
-from pretix.base.signals import register_global_settings, register_ticket_outputs
+from pretix.base.signals import (
+    event_copy_data, register_global_settings, register_ticket_outputs,
+)
 from pretix.control.signals import nav_event_settings, nav_organizer
 
+from .client import SUBEVENT_HERO_PREFIX
 from .forms import credential_fields
+
+
+@receiver(event_copy_data, dispatch_uid="pretix_google_wallet_drop_copied_hero_images")
+def drop_copied_subevent_hero_images(sender, other, **kwargs):
+    """
+    Event.copy_data_from() copies every setting verbatim, but per-date hero images are
+    keyed on the source event's subevent ids and dates are not copied at all. Left in
+    place they would point at nothing, and because the value is a raw file reference the
+    two events would share one file.
+    """
+    for key in [s.key for s in sender.settings._objects.all() if s.key.startswith(SUBEVENT_HERO_PREFIX)]:
+        sender.settings.delete(key)
 
 
 @receiver(register_ticket_outputs, dispatch_uid="pretix_google_wallet_ticket_output")
