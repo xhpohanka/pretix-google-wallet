@@ -16,6 +16,9 @@ dependencies = [
 [project.entry-points."pretix.plugin"]
 pretix_google_wallet = "pretix_google_wallet:PretixPluginMeta"
 
+[project.urls]
+Homepage = "https://github.com/xhpohanka/pretix-google-wallet"
+
 [build-system]
 requires = ["setuptools", "pretix-plugin-build"]
 build-backend = "setuptools.build_meta"
